@@ -26,6 +26,15 @@ body {
   height: 100%;
 }
 
+/* Allotment sash theming */
+:root {
+  --focus-border: #6366f1;
+  --separator-border: rgba(0, 0, 0, 0.12);
+}
+.dark {
+  --separator-border: rgba(255, 255, 255, 0.08);
+}
+
 /* Custom scrollbar for dark mode */
 .dark ::-webkit-scrollbar {
   width: 8px;

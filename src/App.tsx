@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Allotment } from 'allotment';
 import { GitCompareArrows, BarChart3, Coins, GitMerge } from 'lucide-react';
 import { Header } from './components/Layout/Header';
 import { Footer } from './components/Layout/Footer';
@@ -63,41 +64,49 @@ export default function App() {
     <div className="flex h-full flex-col transition-colors duration-200">
       <Header />
 
-      <main className="flex min-h-0 flex-1 flex-col">
-        <div className="flex-shrink-0" style={{ height: 'clamp(200px, 28vh, 300px)' }}>
-          <DualEditor />
-        </div>
+      <main className="min-h-0 flex-1">
+        <Allotment vertical defaultSizes={[28, 72]}>
+          {/* ── Top pane: editors ── */}
+          <Allotment.Pane minSize={150} preferredSize="28%">
+            <DualEditor />
+          </Allotment.Pane>
 
-        <div className="flex-shrink-0 border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
-          <div className="mx-auto max-w-screen-2xl">
-            <nav className="flex gap-0 overflow-x-auto px-4" role="tablist">
-              {TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  role="tab"
-                  aria-selected={activeTab === tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`inline-flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-                    activeTab === tab.id
-                      ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
-                      : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:text-gray-300'
-                  }`}
-                >
-                  {tab.icon}
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
-          </div>
-        </div>
+          {/* ── Bottom pane: tab nav + tab content ── */}
+          <Allotment.Pane minSize={180}>
+            <div className="flex h-full flex-col">
+              <div className="flex-shrink-0 border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+                <div className="mx-auto max-w-screen-2xl">
+                  <nav className="flex gap-0 overflow-x-auto px-4" role="tablist">
+                    {TABS.map((tab) => (
+                      <button
+                        key={tab.id}
+                        role="tab"
+                        aria-selected={activeTab === tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`inline-flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                          activeTab === tab.id
+                            ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
+                            : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:text-gray-300'
+                        }`}
+                      >
+                        {tab.icon}
+                        {tab.label}
+                      </button>
+                    ))}
+                  </nav>
+                </div>
+              </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-950" role="tabpanel">
-          <div className="mx-auto max-w-screen-2xl">
-            <ErrorBoundary fallbackMessage="This panel encountered an error. Try clicking 'Compare' again.">
-              <TabPanel />
-            </ErrorBoundary>
-          </div>
-        </div>
+              <div className="min-h-0 flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-950" role="tabpanel">
+                <div className="mx-auto max-w-screen-2xl">
+                  <ErrorBoundary fallbackMessage="This panel encountered an error. Try clicking 'Compare' again.">
+                    <TabPanel />
+                  </ErrorBoundary>
+                </div>
+              </div>
+            </div>
+          </Allotment.Pane>
+        </Allotment>
       </main>
 
       <Footer />
