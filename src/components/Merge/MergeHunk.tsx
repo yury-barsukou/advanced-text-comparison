@@ -5,11 +5,13 @@ import type { MergeHunkData, HunkResolution } from '../../types';
 interface Props {
   hunk: MergeHunkData;
   isFocused?: boolean;
+  /** Increments on every navigation; used to re-trigger the flash animation. */
+  flashKey?: number;
   onResolve: (resolution: HunkResolution) => void;
 }
 
 export const MergeHunk = forwardRef<HTMLDivElement, Props>(
-  function MergeHunk({ hunk, isFocused = false, onResolve }, ref) {
+  function MergeHunk({ hunk, isFocused = false, flashKey, onResolve }, ref) {
     if (hunk.type === 'common') {
       return (
         <div className="border-b border-gray-100 bg-white px-4 py-1 font-mono text-sm text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400">
@@ -27,16 +29,20 @@ export const MergeHunk = forwardRef<HTMLDivElement, Props>(
     return (
       <div
         ref={ref}
-        className={`border-b-2 transition-shadow ${
-          isFocused
-            ? 'ring-2 ring-inset ring-indigo-500 dark:ring-indigo-400'
-            : ''
-        } ${
+        className={`relative border-b-2 ${
           isResolved
             ? 'border-green-300 dark:border-green-700'
             : 'border-amber-300 dark:border-amber-700'
         }`}
       >
+        {/* Flash-and-fade left-bar animation, re-triggered via key on every navigation */}
+        {isFocused && typeof flashKey === 'number' && (
+          <div
+            key={flashKey}
+            className="merge-nav-flash pointer-events-none absolute inset-0"
+            aria-hidden
+          />
+        )}
         <div
           className={`flex items-center justify-between px-4 py-1.5 ${
             isFocused

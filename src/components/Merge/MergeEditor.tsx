@@ -16,6 +16,9 @@ export function MergeEditor() {
 
   const [copied, setCopied] = useState(false);
   const [focusedConflictIdx, setFocusedConflictIdx] = useState(0);
+  // Increments on every navigation so the flash animation re-triggers
+  // even when wrapping back to a previously focused conflict.
+  const [flashGen, setFlashGen] = useState(0);
 
   // Ordered list of conflict hunk IDs (excludes 'common' hunks)
   const conflictIds = mergeHunks
@@ -60,6 +63,11 @@ export function MergeEditor() {
     setFocusedConflictIdx(0);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hunkStructureKey]);
+
+  // Bump flash generation on every navigation so the animation replays.
+  useEffect(() => {
+    setFlashGen((g) => g + 1);
+  }, [focusedConflictIdx]);
 
   // Scroll to the focused conflict on initial mount and whenever focusedConflictIdx changes.
   // rAF ensures the hunk DOM nodes are rendered before we try to scroll.
@@ -196,6 +204,7 @@ export function MergeEditor() {
               ref={hunk.type === 'conflict' ? setHunkRef(hunk.id) : undefined}
               hunk={hunk}
               isFocused={hunk.type === 'conflict' && hunk.id === focusedHunkId}
+              flashKey={hunk.type === 'conflict' && hunk.id === focusedHunkId ? flashGen : undefined}
               onResolve={(resolution) => handleResolve(hunk.id, resolution)}
             />
           ))}

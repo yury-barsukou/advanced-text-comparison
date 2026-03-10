@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DiffEditor } from '@monaco-editor/react';
+import type { Monaco } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import { Columns2, Rows2, ArrowUp, ArrowDown } from 'lucide-react';
 import { useComparisonStore } from '../../stores/comparisonStore';
@@ -13,10 +14,66 @@ interface LineChange {
 
 /** Retrieve line changes from the diff editor regardless of Monaco version. */
 function getDiffChanges(ed: editor.IStandaloneDiffEditor): LineChange[] {
-  // Monaco ≥ 0.45 uses getDiffComputationResult(); older versions use getLineChanges().
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const any = ed as any;
   return any.getDiffComputationResult?.()?.changes ?? any.getLineChanges?.() ?? [];
+}
+
+/**
+ * Attach a flash bar to the right edge of the original (left) editor panel.
+ *
+ * The bar is appended to Monaco's `.overflow-guard` element — which has
+ * the VIEWPORT dimensions of the editor — and positioned using
+ * scroll-adjusted content coordinates so it tracks the correct lines even
+ * when the user scrolls.  A scroll listener keeps it repositioned for the
+ * duration of the animation.
+ */
+function attachOrigBar(
+  origEditor: editor.IStandaloneCodeEditor,
+  origStart: number,
+  origEnd: number,
+  durationMs: number,
+  isDark: boolean,
+): ReturnType<typeof setTimeout> {
+  const domNode = origEditor.getDomNode();
+  if (!domNode) return setTimeout(() => {}, 0);
+
+  // Remove any previous bar immediately so the animation restarts.
+  domNode.querySelector('.diff-nav-orig-bar')?.remove();
+
+  // Pure insertion: the original side has no lines for this change.
+  if (origEnd === 0) return setTimeout(() => {}, 0);
+
+  // `.overflow-guard` has the viewport dimensions of the editor and is a
+  // positioning context, so `position:absolute; right:0` sits at the right
+  // edge of the VISIBLE editor regardless of content / horizontal scroll.
+  const overflowGuard = domNode.querySelector('.overflow-guard') as HTMLElement | null;
+  if (!overflowGuard) return setTimeout(() => {}, 0);
+
+  const bar = document.createElement('div');
+  bar.className = 'diff-nav-orig-bar' + (isDark ? ' diff-nav-orig-bar--dark' : '');
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const edAny = origEditor as any;
+
+  /** Reposition the bar based on current scroll state. */
+  function reposition() {
+    const scrollTop = origEditor.getScrollTop();
+    const startY    = (edAny.getTopForLineNumber(origStart)     as number) - scrollTop;
+    const endY      = (edAny.getTopForLineNumber(origEnd + 1)   as number) - scrollTop;
+    bar.style.top    = `${startY}px`;
+    bar.style.height = `${Math.max(endY - startY, 19)}px`; // ≥ 1 line tall
+  }
+
+  reposition();
+  overflowGuard.appendChild(bar);
+
+  const scrollSub = origEditor.onDidScrollChange(reposition);
+
+  return setTimeout(() => {
+    bar.remove();
+    scrollSub.dispose();
+  }, durationMs);
 }
 
 export function DiffViewer() {
@@ -27,25 +84,60 @@ export function DiffViewer() {
   const hasCompared = useComparisonStore((s) => s.hasCompared);
 
   const [renderSideBySide, setRenderSideBySide] = useState(true);
-  const editorRef = useRef<editor.IStandaloneDiffEditor | null>(null);
+  const editorRef     = useRef<editor.IStandaloneDiffEditor | null>(null);
+  const monacoRef     = useRef<Monaco | null>(null);
+  const modDecorRef   = useRef<string[]>([]);
+  const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const FLASH_DURATION_MS = 4500;
+
   const [changeCount, setChangeCount] = useState(0);
-  const [currentIdx, setCurrentIdx] = useState(0);
+  const [currentIdx,  setCurrentIdx]  = useState(0);
 
   const monacoTheme = theme === 'dark' ? 'vs-dark' : 'vs';
+  const isDark      = theme === 'dark';
 
-  // Scroll the modified editor to a specific diff change and update the counter.
   const goToChange = useCallback((idx: number) => {
-    const ed = editorRef.current;
-    if (!ed) return;
+    const ed     = editorRef.current;
+    const monaco = monacoRef.current;
+    if (!ed || !monaco) return;
+
     const changes = getDiffChanges(ed);
     if (changes.length === 0) return;
-    const clamped = Math.max(0, Math.min(idx, changes.length - 1));
-    const change  = changes[clamped];
-    const line    = change.modifiedStartLineNumber || change.modifiedEndLineNumber || 1;
-    // ScrollType.Smooth = 1
-    ed.getModifiedEditor().revealLineInCenter(line, 1);
+
+    const clamped   = Math.max(0, Math.min(idx, changes.length - 1));
+    const change    = changes[clamped];
+
+    const modStart  = change.modifiedStartLineNumber  || 1;
+    const modEnd    = change.modifiedEndLineNumber    || modStart;
+    const origStart = change.originalStartLineNumber  || 1;
+    const origEnd   = change.originalEndLineNumber;   // 0 = pure insertion (no original lines)
+
+    ed.getModifiedEditor().revealLineInCenter(modStart, 1 /* ScrollType.Smooth */);
+
+    if (clearTimerRef.current !== null) {
+      clearTimeout(clearTimerRef.current);
+      clearTimerRef.current = null;
+    }
+
+    // Right (modified) panel — left bar via per-line CSS class.
+    modDecorRef.current = ed.getModifiedEditor().deltaDecorations(
+      modDecorRef.current,
+      [{ range: new monaco.Range(modStart, 1, modEnd, Number.MAX_VALUE),
+         options: { isWholeLine: true, className: 'diff-nav-highlight' } }],
+    );
+
+    // Left (original) panel — right bar via DOM overlay pinned to the exact lines.
+    attachOrigBar(ed.getOriginalEditor(), origStart, origEnd, FLASH_DURATION_MS, isDark);
+
+    // Clean up the modified decoration after the animation.
+    clearTimerRef.current = setTimeout(() => {
+      modDecorRef.current = ed.getModifiedEditor().deltaDecorations(modDecorRef.current, []);
+      clearTimerRef.current = null;
+    }, FLASH_DURATION_MS);
+
     setCurrentIdx(clamped);
-  }, []);
+  }, [isDark]);
 
   const goPrev = useCallback(() => {
     goToChange(currentIdx <= 0 ? changeCount - 1 : currentIdx - 1);
@@ -55,27 +147,28 @@ export function DiffViewer() {
     goToChange(currentIdx >= changeCount - 1 ? 0 : currentIdx + 1);
   }, [currentIdx, changeCount, goToChange]);
 
-  // Wire up the diff-updated event when the editor mounts.
-  const handleMount = useCallback((diffEditor: editor.IStandaloneDiffEditor) => {
+  const handleMount = useCallback((diffEditor: editor.IStandaloneDiffEditor, monaco: Monaco) => {
     editorRef.current = diffEditor;
+    monacoRef.current = monaco;
+
     diffEditor.onDidUpdateDiff(() => {
       const count = getDiffChanges(diffEditor).length;
       setChangeCount(count);
       setCurrentIdx(0);
-      // Scroll to the first change as soon as the diff is ready.
       if (count > 0) {
         requestAnimationFrame(() => goToChange(0));
+      } else {
+        modDecorRef.current = diffEditor.getModifiedEditor().deltaDecorations(modDecorRef.current, []);
+        diffEditor.getOriginalEditor().getDomNode()?.querySelector('.diff-nav-orig-bar')?.remove();
       }
     });
   }, [goToChange]);
 
-  // Reset counters when texts change (new comparison).
   useEffect(() => {
     setCurrentIdx(0);
     setChangeCount(0);
   }, [leftText, rightText]);
 
-  // Keyboard navigation: Alt+Up / Alt+Down (mirrors Merge tab).
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.altKey && e.key === 'ArrowUp')   { e.preventDefault(); goPrev(); }
@@ -95,9 +188,7 @@ export function DiffViewer() {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Toolbar */}
       <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2 dark:border-gray-800 dark:bg-gray-900/50">
-        {/* Left: label + change navigator */}
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
             Visual Diff
@@ -140,7 +231,6 @@ export function DiffViewer() {
           )}
         </div>
 
-        {/* Right: view-mode toggle */}
         <div className="flex items-center gap-1 rounded-lg border border-gray-300 p-0.5 dark:border-gray-600">
           <button
             onClick={() => setRenderSideBySide(true)}
@@ -167,7 +257,6 @@ export function DiffViewer() {
         </div>
       </div>
 
-      {/* Monaco diff editor — fills all remaining height */}
       <div className="min-h-0 flex-1">
         <DiffEditor
           height="100%"
