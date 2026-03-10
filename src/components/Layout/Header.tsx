@@ -12,7 +12,7 @@ export function Header() {
         <div className="flex items-center gap-2">
           <GitCompareArrows className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
           <h1 className="text-lg font-semibold tracking-tight">
-            Text Compare
+            Advanced Text Compare
           </h1>
         </div>
 
