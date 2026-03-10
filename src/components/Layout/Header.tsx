@@ -2,10 +2,46 @@ import { Sun, Moon, GitCompareArrows } from 'lucide-react';
 import { useComparisonStore } from '../../stores/comparisonStore';
 import { LanguageSelector } from '../Editor/LanguageSelector';
 
-export function Header() {
+function ThemeToggle() {
   const theme = useComparisonStore((s) => s.theme);
   const toggleTheme = useComparisonStore((s) => s.toggleTheme);
+  const isDark = theme === 'dark';
 
+  return (
+    <button
+      role="switch"
+      aria-checked={isDark}
+      aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+      onClick={toggleTheme}
+      className={`
+        relative inline-flex h-7 w-[3.25rem] flex-shrink-0 cursor-pointer items-center
+        rounded-full border-2 border-transparent outline-none
+        transition-colors duration-300 ease-in-out
+        focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2
+        focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900
+        ${isDark ? 'bg-indigo-600' : 'bg-gray-300'}
+      `}
+    >
+      {/* sliding knob */}
+      <span
+        className={`
+          pointer-events-none flex h-5 w-5 items-center justify-center
+          rounded-full bg-white shadow-md ring-0
+          transition-transform duration-300 ease-in-out
+          ${isDark ? 'translate-x-[1.625rem]' : 'translate-x-0.5'}
+        `}
+      >
+        {isDark ? (
+          <Moon className="h-3 w-3 text-indigo-600" />
+        ) : (
+          <Sun className="h-3 w-3 text-amber-500" />
+        )}
+      </span>
+    </button>
+  );
+}
+
+export function Header() {
   return (
     <header className="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
       <div className="mx-auto flex h-14 max-w-screen-2xl items-center justify-between px-4">
@@ -18,17 +54,7 @@ export function Header() {
 
         <div className="flex items-center gap-3">
           <LanguageSelector />
-          <button
-            onClick={toggleTheme}
-            className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
-            title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-          >
-            {theme === 'light' ? (
-              <Moon className="h-5 w-5" />
-            ) : (
-              <Sun className="h-5 w-5" />
-            )}
-          </button>
+          <ThemeToggle />
         </div>
       </div>
     </header>
