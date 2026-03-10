@@ -1,4 +1,5 @@
 import Editor from '@monaco-editor/react';
+import { Allotment } from 'allotment';
 import { ArrowLeftRight, Trash2, GitCompareArrows, Loader2 } from 'lucide-react';
 import { useComparisonStore } from '../../stores/comparisonStore';
 
@@ -64,44 +65,50 @@ export function DualEditor() {
         </button>
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-2">
-        <div className="flex min-h-0 flex-col border-r border-gray-200 dark:border-gray-800">
-          <div className="flex-shrink-0 border-b border-gray-200 bg-gray-50 px-4 py-1.5 dark:border-gray-800 dark:bg-gray-900/50">
-            <span className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              Original Text
-            </span>
-          </div>
-          <div className="min-h-0 flex-1">
-            <Editor
-              height="100%"
-              language={language}
-              theme={monacoTheme}
-              value={leftText}
-              onChange={(value) => setLeftText(value ?? '')}
-              loading={<EditorLoading />}
-              options={editorOptions}
-            />
-          </div>
-        </div>
+      <div className="min-h-0 flex-1">
+        <Allotment defaultSizes={[50, 50]}>
+          <Allotment.Pane minSize={200}>
+            <div className="flex h-full flex-col">
+              <div className="flex-shrink-0 border-b border-r border-gray-200 bg-gray-50 px-4 py-1.5 dark:border-gray-800 dark:bg-gray-900/50">
+                <span className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  Original Text
+                </span>
+              </div>
+              <div className="min-h-0 flex-1">
+                <Editor
+                  height="100%"
+                  language={language}
+                  theme={monacoTheme}
+                  value={leftText}
+                  onChange={(value) => setLeftText(value ?? '')}
+                  loading={<EditorLoading />}
+                  options={editorOptions}
+                />
+              </div>
+            </div>
+          </Allotment.Pane>
 
-        <div className="flex min-h-0 flex-col">
-          <div className="flex-shrink-0 border-b border-gray-200 bg-gray-50 px-4 py-1.5 dark:border-gray-800 dark:bg-gray-900/50">
-            <span className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              Modified Text
-            </span>
-          </div>
-          <div className="min-h-0 flex-1">
-            <Editor
-              height="100%"
-              language={language}
-              theme={monacoTheme}
-              value={rightText}
-              onChange={(value) => setRightText(value ?? '')}
-              loading={<EditorLoading />}
-              options={editorOptions}
-            />
-          </div>
-        </div>
+          <Allotment.Pane minSize={200}>
+            <div className="flex h-full flex-col">
+              <div className="flex-shrink-0 border-b border-gray-200 bg-gray-50 px-4 py-1.5 dark:border-gray-800 dark:bg-gray-900/50">
+                <span className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  Modified Text
+                </span>
+              </div>
+              <div className="min-h-0 flex-1">
+                <Editor
+                  height="100%"
+                  language={language}
+                  theme={monacoTheme}
+                  value={rightText}
+                  onChange={(value) => setRightText(value ?? '')}
+                  loading={<EditorLoading />}
+                  options={editorOptions}
+                />
+              </div>
+            </div>
+          </Allotment.Pane>
+        </Allotment>
       </div>
     </div>
   );
