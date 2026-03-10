@@ -81,8 +81,23 @@ export function MergeEditor() {
   const handleResolve = useCallback(
     (hunkId: number, resolution: HunkResolution) => {
       resolveHunk(hunkId, resolution);
+
+      // After resolving, jump to the next unresolved conflict (forward, wrapping).
+      // We search starting at currentIdx+1 since the current hunk is now resolved.
+      // mergeHunks still reflects pre-resolution state here, so skip hunkId explicitly.
+      const currentIdx = conflictIds.indexOf(hunkId);
+      for (let offset = 1; offset < conflictIds.length; offset++) {
+        const candidateIdx = (currentIdx + offset) % conflictIds.length;
+        const candidateId = conflictIds[candidateIdx];
+        const candidateHunk = mergeHunks.find((h) => h.id === candidateId);
+        if (candidateHunk && candidateHunk.resolution === null) {
+          setFocusedConflictIdx(candidateIdx);
+          return;
+        }
+      }
+      // All remaining conflicts are resolved — stay on the current one.
     },
-    [resolveHunk],
+    [resolveHunk, conflictIds, mergeHunks],
   );
 
   const handleCopy = async () => {
