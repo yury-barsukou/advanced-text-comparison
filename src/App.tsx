@@ -64,7 +64,7 @@ export default function App() {
       <Header />
 
       <main className="flex min-h-0 flex-1 flex-col">
-        <div className="flex-shrink-0" style={{ height: 'clamp(250px, 42vh, 500px)' }}>
+        <div className="flex-shrink-0" style={{ height: 'clamp(200px, 28vh, 300px)' }}>
           <DualEditor />
         </div>
 
