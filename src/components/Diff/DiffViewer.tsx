@@ -4,10 +4,10 @@ import { Columns2, Rows2 } from 'lucide-react';
 import { useComparisonStore } from '../../stores/comparisonStore';
 
 export function DiffViewer() {
-  const leftText = useComparisonStore((s) => s.leftText);
-  const rightText = useComparisonStore((s) => s.rightText);
-  const language = useComparisonStore((s) => s.language);
-  const theme = useComparisonStore((s) => s.theme);
+  const leftText    = useComparisonStore((s) => s.leftText);
+  const rightText   = useComparisonStore((s) => s.rightText);
+  const language    = useComparisonStore((s) => s.language);
+  const theme       = useComparisonStore((s) => s.theme);
   const hasCompared = useComparisonStore((s) => s.hasCompared);
 
   const [renderSideBySide, setRenderSideBySide] = useState(true);
@@ -23,8 +23,9 @@ export function DiffViewer() {
   }
 
   return (
-    <div className="flex flex-col">
-      <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2 dark:border-gray-800 dark:bg-gray-900/50">
+    <div className="flex h-full flex-col">
+      {/* Toolbar */}
+      <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2 dark:border-gray-800 dark:bg-gray-900/50">
         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
           Visual Diff
         </span>
@@ -53,7 +54,9 @@ export function DiffViewer() {
           </button>
         </div>
       </div>
-      <div style={{ height: '400px' }}>
+
+      {/* Monaco diff editor — fills all remaining height */}
+      <div className="min-h-0 flex-1">
         <DiffEditor
           height="100%"
           language={language}

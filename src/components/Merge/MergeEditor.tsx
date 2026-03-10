@@ -127,8 +127,8 @@ export function MergeEditor() {
   const focusedHunkId = conflictIds[focusedConflictIdx];
 
   return (
-    <div className="flex flex-col lg:flex-row">
-      <div className="flex-1 border-r border-gray-200 dark:border-gray-800">
+    <div className="flex h-full flex-col lg:flex-row">
+      <div className="flex min-h-0 flex-1 flex-col border-r border-gray-200 dark:border-gray-800">
         {/* Toolbar */}
         <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2 dark:border-gray-800 dark:bg-gray-900/50">
           {/* Left: badge + navigator */}
@@ -189,7 +189,7 @@ export function MergeEditor() {
           </div>
         </div>
 
-        <div className="max-h-[500px] overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           {mergeHunks.map((hunk) => (
             <MergeHunk
               key={hunk.id}
@@ -203,7 +203,7 @@ export function MergeEditor() {
       </div>
 
       {/* Merged result panel */}
-      <div className="flex w-full flex-col lg:w-[45%]">
+      <div className="flex min-h-0 w-full flex-col lg:w-[45%]">
         <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2 dark:border-gray-800 dark:bg-gray-900/50">
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
             Merged Result
@@ -225,7 +225,7 @@ export function MergeEditor() {
             )}
           </button>
         </div>
-        <div style={{ height: '500px' }}>
+        <div className="min-h-0 flex-1">
           <Editor
             height="100%"
             language={language}

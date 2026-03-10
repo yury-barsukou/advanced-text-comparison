@@ -54,7 +54,7 @@ export function TokenCounterPanel() {
   const diff = counts ? counts.rightCount - counts.leftCount : null;
 
   return (
-    <div className="p-6">
+    <div className="h-full overflow-y-auto p-6">
       {/* Model selector */}
       <div className="mb-6 flex items-center gap-3">
         <label

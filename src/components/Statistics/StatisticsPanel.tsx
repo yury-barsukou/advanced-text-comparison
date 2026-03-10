@@ -17,12 +17,14 @@ export function StatisticsPanel() {
   }
 
   return (
+    <div className="h-full overflow-y-auto">
     <div className="space-y-6 p-4">
       <ComparisonStatsDisplay stats={diffStats} />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <TextStatsDisplay stats={leftStats} label="Original Text" />
         <TextStatsDisplay stats={rightStats} label="Modified Text" />
       </div>
+    </div>
     </div>
   );
 }
