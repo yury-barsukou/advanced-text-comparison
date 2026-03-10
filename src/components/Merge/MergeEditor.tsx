@@ -46,20 +46,12 @@ export function MergeEditor() {
   }, [conflictIds]);
 
   const goPrev = useCallback(() => {
-    setFocusedConflictIdx((prev) => {
-      const next = prev <= 0 ? conflictCount - 1 : prev - 1;
-      scrollToConflict(next);
-      return next;
-    });
-  }, [conflictCount, scrollToConflict]);
+    setFocusedConflictIdx((prev) => (prev <= 0 ? conflictCount - 1 : prev - 1));
+  }, [conflictCount]);
 
   const goNext = useCallback(() => {
-    setFocusedConflictIdx((prev) => {
-      const next = prev >= conflictCount - 1 ? 0 : prev + 1;
-      scrollToConflict(next);
-      return next;
-    });
-  }, [conflictCount, scrollToConflict]);
+    setFocusedConflictIdx((prev) => (prev >= conflictCount - 1 ? 0 : prev + 1));
+  }, [conflictCount]);
 
   // Reset focused index only when the hunk structure changes (new compare),
   // not when resolutions are updated on the same set of hunks.
@@ -68,6 +60,13 @@ export function MergeEditor() {
     setFocusedConflictIdx(0);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hunkStructureKey]);
+
+  // Scroll to the focused conflict on initial mount and whenever focusedConflictIdx changes.
+  // rAF ensures the hunk DOM nodes are rendered before we try to scroll.
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => scrollToConflict(focusedConflictIdx));
+    return () => cancelAnimationFrame(raf);
+  }, [focusedConflictIdx, scrollToConflict]);
 
   // Keyboard navigation: Alt+Up / Alt+Down
   useEffect(() => {
