@@ -62,8 +62,12 @@ export function DiffViewer() {
       const count = getDiffChanges(diffEditor).length;
       setChangeCount(count);
       setCurrentIdx(0);
+      // Scroll to the first change as soon as the diff is ready.
+      if (count > 0) {
+        requestAnimationFrame(() => goToChange(0));
+      }
     });
-  }, []);
+  }, [goToChange]);
 
   // Reset counters when texts change (new comparison).
   useEffect(() => {
