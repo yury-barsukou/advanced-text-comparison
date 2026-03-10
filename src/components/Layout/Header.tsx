@@ -44,7 +44,7 @@ function ThemeToggle() {
 export function Header() {
   return (
     <header className="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
-      <div className="mx-auto flex h-14 max-w-screen-2xl items-center justify-between px-4">
+      <div className="flex h-14 items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <GitCompareArrows className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
           <h1 className="text-lg font-semibold tracking-tight">

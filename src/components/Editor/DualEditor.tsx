@@ -65,7 +65,7 @@ export function DualEditor() {
         </button>
       </div>
 
-      <div className="min-h-0 flex-1">
+      <div className="flex-1 overflow-hidden">
         <Allotment defaultSizes={[50, 50]}>
           <Allotment.Pane minSize={200}>
             <div className="flex h-full flex-col">
