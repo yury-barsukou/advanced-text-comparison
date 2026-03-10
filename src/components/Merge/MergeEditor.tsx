@@ -61,10 +61,13 @@ export function MergeEditor() {
     });
   }, [conflictCount, scrollToConflict]);
 
-  // Reset focused index when hunks change (new compare)
+  // Reset focused index only when the hunk structure changes (new compare),
+  // not when resolutions are updated on the same set of hunks.
+  const hunkStructureKey = mergeHunks.map((h) => `${h.id}:${h.type}`).join(',');
   useEffect(() => {
     setFocusedConflictIdx(0);
-  }, [mergeHunks]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hunkStructureKey]);
 
   // Keyboard navigation: Alt+Up / Alt+Down
   useEffect(() => {
