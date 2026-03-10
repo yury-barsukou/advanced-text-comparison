@@ -12,7 +12,6 @@ import type {
 } from '../types';
 import { computeTextStats, computeDiffStats } from '../utils/statistics';
 import { computeMergeHunks, buildMergedText } from '../utils/diff';
-import { countAllTokens } from '../utils/tokenizer';
 
 interface ComparisonState {
   leftText: string;
@@ -142,16 +141,9 @@ export const useComparisonStore = create<ComparisonState>()(
         set({ mergeHunks: hunks, mergedText: buildMergedText(hunks) });
       },
 
-      loadTokenCounts: async () => {
-        set({ tokenCountsLoading: true });
-        try {
-          const { leftText, rightText } = get();
-          const tokenCounts = await countAllTokens(leftText, rightText);
-          set({ tokenCounts, tokenCountsLoading: false });
-        } catch {
-          set({ tokenCountsLoading: false });
-        }
-      },
+      // Token counting is now handled directly in TokenCounterPanel.
+      // This stub satisfies the interface for backwards compatibility.
+      loadTokenCounts: async () => {},
     }),
     {
       name: 'text-compare-session',
