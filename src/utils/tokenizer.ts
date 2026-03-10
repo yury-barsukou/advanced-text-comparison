@@ -23,7 +23,7 @@ const MODEL_ENCODING: Record<string, 'o200k_base' | 'cl100k_base'> = {
   'gpt-4-turbo': 'cl100k_base',
 };
 
-type Encoder = { encode: (text: string) => Uint32Array };
+type Encoder = { encode: (text: string) => ArrayLike<number> };
 const encoderCache = new Map<string, Encoder>();
 
 async function getEncoder(encoding: 'o200k_base' | 'cl100k_base'): Promise<Encoder> {
