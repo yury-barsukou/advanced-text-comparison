@@ -151,6 +151,15 @@ export function DiffViewer() {
     editorRef.current = diffEditor;
     monacoRef.current = monaco;
 
+    // Force word wrap on each sub-editor directly — the top-level options prop
+    // doesn't reliably propagate this to the inner editors in side-by-side mode.
+    const wrapOpts: editor.IEditorOptions = {
+      wordWrap: 'on',
+      wrappingStrategy: 'advanced',
+    };
+    diffEditor.getOriginalEditor().updateOptions(wrapOpts);
+    diffEditor.getModifiedEditor().updateOptions(wrapOpts);
+
     diffEditor.onDidUpdateDiff(() => {
       const count = getDiffChanges(diffEditor).length;
       setChangeCount(count);
@@ -271,6 +280,7 @@ export function DiffViewer() {
             minimap: { enabled: false },
             fontSize: 13,
             wordWrap: 'on',
+            wordWrapOverride1: 'on',
             scrollBeyondLastLine: false,
             automaticLayout: true,
           }}
