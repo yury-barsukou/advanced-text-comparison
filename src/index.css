@@ -75,33 +75,44 @@ body {
   animation: diff-nav-flash-left-dark 4.5s ease-out forwards;
 }
 
-/* Merge tab conflict blocks — right bar */
+/* Merge tab conflict blocks — both left + right bars */
+@keyframes diff-nav-flash-both {
+  0%   { box-shadow: inset  6px 0 0 rgba(99,  102, 241, 0),   inset -6px 0 0 rgba(99,  102, 241, 0); }
+  8%   { box-shadow: inset  6px 0 0 rgba(99,  102, 241, 1),   inset -6px 0 0 rgba(99,  102, 241, 1); }
+  50%  { box-shadow: inset  6px 0 0 rgba(99,  102, 241, 0.9), inset -6px 0 0 rgba(99,  102, 241, 0.9); }
+  100% { box-shadow: inset  6px 0 0 rgba(99,  102, 241, 0),   inset -6px 0 0 rgba(99,  102, 241, 0); }
+}
+@keyframes diff-nav-flash-both-dark {
+  0%   { box-shadow: inset  6px 0 0 rgba(129, 140, 248, 0),   inset -6px 0 0 rgba(129, 140, 248, 0); }
+  8%   { box-shadow: inset  6px 0 0 rgba(129, 140, 248, 1),   inset -6px 0 0 rgba(129, 140, 248, 1); }
+  50%  { box-shadow: inset  6px 0 0 rgba(129, 140, 248, 0.9), inset -6px 0 0 rgba(129, 140, 248, 0.9); }
+  100% { box-shadow: inset  6px 0 0 rgba(129, 140, 248, 0),   inset -6px 0 0 rgba(129, 140, 248, 0); }
+}
 .merge-nav-flash {
-  animation: diff-nav-flash-right 4.5s ease-out forwards;
+  animation: diff-nav-flash-both 4.5s ease-out forwards;
 }
 .dark .merge-nav-flash {
-  animation: diff-nav-flash-right-dark 4.5s ease-out forwards;
+  animation: diff-nav-flash-both-dark 4.5s ease-out forwards;
 }
 
-/* Left (original) Diff panel — DOM overlay appended to Monaco's .overflow-guard.
-   top/height are set dynamically in JS (scroll-adjusted content coordinates).
-   right:0 pins it to the right edge of the visible editor viewport. */
-@keyframes diff-nav-orig-flash {
+/* Diff editor right-edge DOM overlay — appended to .overflow-guard of each
+   sub-editor; top/height set dynamically via JS in scroll-adjusted coordinates. */
+@keyframes diff-nav-right-bar-flash {
   0%   { opacity: 0; }
   8%   { opacity: 1; }
   50%  { opacity: 0.9; }
   100% { opacity: 0; }
 }
-.diff-nav-orig-bar {
+.diff-nav-right-bar {
   position: absolute;
   right: 0;
   width: 6px;
   background-color: rgb(99, 102, 241);
   pointer-events: none;
   z-index: 10;
-  animation: diff-nav-orig-flash 4.5s ease-out forwards;
+  animation: diff-nav-right-bar-flash 4.5s ease-out forwards;
 }
-.diff-nav-orig-bar--dark {
+.diff-nav-right-bar--dark {
   background-color: rgb(129, 140, 248);
 }
 

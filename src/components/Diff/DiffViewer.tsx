@@ -12,7 +12,6 @@ interface LineChange {
   modifiedEndLineNumber: number;
 }
 
-/** Retrieve line changes from the diff editor regardless of Monaco version. */
 function getDiffChanges(ed: editor.IStandaloneDiffEditor): LineChange[] {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const any = ed as any;
@@ -20,60 +19,56 @@ function getDiffChanges(ed: editor.IStandaloneDiffEditor): LineChange[] {
 }
 
 /**
- * Attach a flash bar to the right edge of the original (left) editor panel.
- *
- * The bar is appended to Monaco's `.overflow-guard` element — which has
- * the VIEWPORT dimensions of the editor — and positioned using
- * scroll-adjusted content coordinates so it tracks the correct lines even
- * when the user scrolls.  A scroll listener keeps it repositioned for the
- * duration of the animation.
+ * Attach a right-edge flash bar to a Monaco sub-editor.
+ * The bar is placed inside `.overflow-guard` (viewport-sized) so `right:0`
+ * always means the visible right edge regardless of content/horizontal scroll.
+ * `top` and `height` are computed from content coordinates and kept in sync
+ * with scroll via an `onDidScrollChange` listener.
  */
-function attachOrigBar(
-  origEditor: editor.IStandaloneCodeEditor,
-  origStart: number,
-  origEnd: number,
+function attachRightEdgeBar(
+  subEditor: editor.IStandaloneCodeEditor,
+  startLine: number,
+  endLine: number,
   durationMs: number,
   isDark: boolean,
 ): ReturnType<typeof setTimeout> {
-  const domNode = origEditor.getDomNode();
+  const domNode = subEditor.getDomNode();
   if (!domNode) return setTimeout(() => {}, 0);
 
-  // Remove any previous bar immediately so the animation restarts.
-  domNode.querySelector('.diff-nav-orig-bar')?.remove();
+  domNode.querySelector('.diff-nav-right-bar')?.remove();
 
-  // Pure insertion: the original side has no lines for this change.
-  if (origEnd === 0) return setTimeout(() => {}, 0);
+  if (endLine === 0) return setTimeout(() => {}, 0); // pure insertion/deletion — no lines on this side
 
-  // `.overflow-guard` has the viewport dimensions of the editor and is a
-  // positioning context, so `position:absolute; right:0` sits at the right
-  // edge of the VISIBLE editor regardless of content / horizontal scroll.
   const overflowGuard = domNode.querySelector('.overflow-guard') as HTMLElement | null;
   if (!overflowGuard) return setTimeout(() => {}, 0);
 
   const bar = document.createElement('div');
-  bar.className = 'diff-nav-orig-bar' + (isDark ? ' diff-nav-orig-bar--dark' : '');
+  bar.className = 'diff-nav-right-bar' + (isDark ? ' diff-nav-right-bar--dark' : '');
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const edAny = origEditor as any;
+  const edAny = subEditor as any;
 
-  /** Reposition the bar based on current scroll state. */
   function reposition() {
-    const scrollTop = origEditor.getScrollTop();
-    const startY    = (edAny.getTopForLineNumber(origStart)     as number) - scrollTop;
-    const endY      = (edAny.getTopForLineNumber(origEnd + 1)   as number) - scrollTop;
+    const scrollTop = subEditor.getScrollTop();
+    const startY    = (edAny.getTopForLineNumber(startLine)    as number) - scrollTop;
+    const endY      = (edAny.getTopForLineNumber(endLine + 1)  as number) - scrollTop;
     bar.style.top    = `${startY}px`;
-    bar.style.height = `${Math.max(endY - startY, 19)}px`; // ≥ 1 line tall
+    bar.style.height = `${Math.max(endY - startY, 19)}px`;
   }
 
   reposition();
   overflowGuard.appendChild(bar);
-
-  const scrollSub = origEditor.onDidScrollChange(reposition);
+  const scrollSub = subEditor.onDidScrollChange(reposition);
 
   return setTimeout(() => {
     bar.remove();
     scrollSub.dispose();
   }, durationMs);
+}
+
+/** Remove all flash bars from a sub-editor's DOM. */
+function clearRightEdgeBar(subEditor: editor.IStandaloneCodeEditor) {
+  subEditor.getDomNode()?.querySelector('.diff-nav-right-bar')?.remove();
 }
 
 export function DiffViewer() {
@@ -86,8 +81,11 @@ export function DiffViewer() {
   const [renderSideBySide, setRenderSideBySide] = useState(true);
   const editorRef     = useRef<editor.IStandaloneDiffEditor | null>(null);
   const monacoRef     = useRef<Monaco | null>(null);
+  // Per-line decoration IDs (left bars via CSS class on .view-line elements).
+  const origDecorRef  = useRef<string[]>([]);
   const modDecorRef   = useRef<string[]>([]);
-  const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Active timers — cleared when a new navigation starts.
+  const timersRef     = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const FLASH_DURATION_MS = 4500;
 
@@ -96,6 +94,17 @@ export function DiffViewer() {
 
   const monacoTheme = theme === 'dark' ? 'vs-dark' : 'vs';
   const isDark      = theme === 'dark';
+
+  const clearAllDecorations = useCallback(() => {
+    const ed = editorRef.current;
+    if (!ed) return;
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+    origDecorRef.current = ed.getOriginalEditor().deltaDecorations(origDecorRef.current, []);
+    modDecorRef.current  = ed.getModifiedEditor().deltaDecorations(modDecorRef.current, []);
+    clearRightEdgeBar(ed.getOriginalEditor());
+    clearRightEdgeBar(ed.getModifiedEditor());
+  }, []);
 
   const goToChange = useCallback((idx: number) => {
     const ed     = editorRef.current;
@@ -108,36 +117,40 @@ export function DiffViewer() {
     const clamped   = Math.max(0, Math.min(idx, changes.length - 1));
     const change    = changes[clamped];
 
+    const origStart = change.originalStartLineNumber || 1;
+    const origEnd   = change.originalEndLineNumber;     // 0 = pure insertion
     const modStart  = change.modifiedStartLineNumber  || 1;
-    const modEnd    = change.modifiedEndLineNumber    || modStart;
-    const origStart = change.originalStartLineNumber  || 1;
-    const origEnd   = change.originalEndLineNumber;   // 0 = pure insertion (no original lines)
+    const modEnd    = change.modifiedEndLineNumber;     // 0 = pure deletion
 
-    ed.getModifiedEditor().revealLineInCenter(modStart, 1 /* ScrollType.Smooth */);
+    ed.getModifiedEditor().revealLineInCenter(modStart || 1, 1 /* ScrollType.Smooth */);
 
-    if (clearTimerRef.current !== null) {
-      clearTimeout(clearTimerRef.current);
-      clearTimerRef.current = null;
-    }
+    clearAllDecorations();
 
-    // Right (modified) panel — left bar via per-line CSS class.
+    // ── Left bar on both panels via per-line CSS class ──
+    origDecorRef.current = ed.getOriginalEditor().deltaDecorations(
+      origDecorRef.current,
+      origEnd !== 0 ? [{ range: new monaco.Range(origStart, 1, origEnd, Number.MAX_VALUE),
+         options: { isWholeLine: true, className: 'diff-nav-highlight' } }] : [],
+    );
     modDecorRef.current = ed.getModifiedEditor().deltaDecorations(
       modDecorRef.current,
-      [{ range: new monaco.Range(modStart, 1, modEnd, Number.MAX_VALUE),
-         options: { isWholeLine: true, className: 'diff-nav-highlight' } }],
+      modEnd !== 0 ? [{ range: new monaco.Range(modStart, 1, modEnd, Number.MAX_VALUE),
+         options: { isWholeLine: true, className: 'diff-nav-highlight' } }] : [],
     );
 
-    // Left (original) panel — right bar via DOM overlay pinned to the exact lines.
-    attachOrigBar(ed.getOriginalEditor(), origStart, origEnd, FLASH_DURATION_MS, isDark);
+    // ── Right bar on both panels via DOM overlay on .overflow-guard ──
+    const t1 = attachRightEdgeBar(ed.getOriginalEditor(), origStart, origEnd, FLASH_DURATION_MS, isDark);
+    const t2 = attachRightEdgeBar(ed.getModifiedEditor(), modStart,  modEnd,  FLASH_DURATION_MS, isDark);
 
-    // Clean up the modified decoration after the animation.
-    clearTimerRef.current = setTimeout(() => {
-      modDecorRef.current = ed.getModifiedEditor().deltaDecorations(modDecorRef.current, []);
-      clearTimerRef.current = null;
+    // Clear the left-bar decorations after the animation ends.
+    const t3 = setTimeout(() => {
+      origDecorRef.current = ed.getOriginalEditor().deltaDecorations(origDecorRef.current, []);
+      modDecorRef.current  = ed.getModifiedEditor().deltaDecorations(modDecorRef.current, []);
     }, FLASH_DURATION_MS);
 
+    timersRef.current = [t1, t2, t3];
     setCurrentIdx(clamped);
-  }, [isDark]);
+  }, [isDark, clearAllDecorations]);
 
   const goPrev = useCallback(() => {
     goToChange(currentIdx <= 0 ? changeCount - 1 : currentIdx - 1);
@@ -151,8 +164,6 @@ export function DiffViewer() {
     editorRef.current = diffEditor;
     monacoRef.current = monaco;
 
-    // Force word wrap on each sub-editor directly — the top-level options prop
-    // doesn't reliably propagate this to the inner editors in side-by-side mode.
     const wrapOpts: editor.IEditorOptions = {
       wordWrap: 'on',
       wrappingStrategy: 'advanced',
@@ -167,11 +178,10 @@ export function DiffViewer() {
       if (count > 0) {
         requestAnimationFrame(() => goToChange(0));
       } else {
-        modDecorRef.current = diffEditor.getModifiedEditor().deltaDecorations(modDecorRef.current, []);
-        diffEditor.getOriginalEditor().getDomNode()?.querySelector('.diff-nav-orig-bar')?.remove();
+        clearAllDecorations();
       }
     });
-  }, [goToChange]);
+  }, [goToChange, clearAllDecorations]);
 
   useEffect(() => {
     setCurrentIdx(0);
